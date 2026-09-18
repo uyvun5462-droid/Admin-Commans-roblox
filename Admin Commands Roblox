@@ -1,1 +1,802 @@
+--// CMD BAR + COMMANDS PANEL + FLY CONTROLS + EXPANDED COMMANDS
+--// Đặt vào StarterPlayer > StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
+
+--==================================================
+-- XÓA GUI CŨ
+--==================================================
+
+local oldGui = playerGui:FindFirstChild("CmdBarGui")
+if oldGui then
+	oldGui:Destroy()
+end
+
+--==================================================
+-- SCREEN GUI
+--==================================================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "CmdBarGui"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = playerGui
+
+--==================================================
+-- CMD BAR
+--==================================================
+
+local bar = Instance.new("Frame")
+bar.Name = "CmdBar"
+bar.Size = UDim2.new(0, 420, 0, 42)
+bar.Position = UDim2.new(0.5, -210, 0, 18)
+bar.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+bar.BorderSizePixel = 0
+bar.Parent = gui
+
+local barCorner = Instance.new("UICorner")
+barCorner.CornerRadius = UDim.new(0, 10)
+barCorner.Parent = bar
+
+local barStroke = Instance.new("UIStroke")
+barStroke.Color = Color3.fromRGB(80, 85, 100)
+barStroke.Thickness = 1.3
+barStroke.Parent = bar
+
+--==================================================
+-- NÚT >
+--==================================================
+
+local toggle = Instance.new("TextButton")
+toggle.Name = "ToggleButton"
+toggle.Size = UDim2.new(0, 38, 0, 38)
+toggle.Position = UDim2.new(0, 2, 0, 2)
+toggle.BackgroundTransparency = 1
+toggle.Text = ">"
+toggle.TextColor3 = Color3.fromRGB(110, 200, 255)
+toggle.TextSize = 23
+toggle.Font = Enum.Font.GothamBold
+toggle.AutoButtonColor = false
+toggle.Parent = bar
+
+--==================================================
+-- Ô NHẬP
+--==================================================
+
+local box = Instance.new("TextBox")
+box.Name = "CommandBox"
+box.Size = UDim2.new(1, -50, 1, -6)
+box.Position = UDim2.new(0, 45, 0, 3)
+box.BackgroundTransparency = 1
+box.ClearTextOnFocus = false
+box.Text = ""
+box.PlaceholderText = "Type Cmds : to use (e.g. :fly 50)"
+box.PlaceholderColor3 = Color3.fromRGB(145, 145, 155)
+box.TextColor3 = Color3.fromRGB(240, 240, 245)
+box.TextSize = 16
+box.Font = Enum.Font.GothamMedium
+box.TextXAlignment = Enum.TextXAlignment.Left
+box.Parent = bar
+
+--==================================================
+-- GUI NÚT UP / DOWN (KHI BAY)
+--==================================================
+
+local flyControls = Instance.new("Frame")
+flyControls.Name = "FlyControls"
+flyControls.Size = UDim2.new(0, 65, 0, 130)
+flyControls.Position = UDim2.new(1, -85, 0.5, -65)
+flyControls.BackgroundTransparency = 1
+flyControls.Visible = false
+flyControls.Parent = gui
+
+local upBtn = Instance.new("TextButton")
+upBtn.Name = "UpButton"
+upBtn.Size = UDim2.new(1, 0, 0, 58)
+upBtn.Position = UDim2.new(0, 0, 0, 0)
+upBtn.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+upBtn.Text = "▲\nUP"
+upBtn.TextColor3 = Color3.fromRGB(120, 225, 255)
+upBtn.TextSize = 13
+upBtn.Font = Enum.Font.GothamBold
+upBtn.AutoButtonColor = false
+upBtn.Parent = flyControls
+
+local upCorner = Instance.new("UICorner")
+upCorner.CornerRadius = UDim.new(0, 12)
+upCorner.Parent = upBtn
+
+local upStroke = Instance.new("UIStroke")
+upStroke.Color = Color3.fromRGB(80, 150, 255)
+upStroke.Thickness = 1.5
+upStroke.Parent = upBtn
+
+local downBtn = Instance.new("TextButton")
+downBtn.Name = "DownButton"
+downBtn.Size = UDim2.new(1, 0, 0, 58)
+downBtn.Position = UDim2.new(0, 0, 1, -58)
+downBtn.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+downBtn.Text = "▼\nDOWN"
+downBtn.TextColor3 = Color3.fromRGB(255, 140, 150)
+downBtn.TextSize = 13
+downBtn.Font = Enum.Font.GothamBold
+downBtn.AutoButtonColor = false
+downBtn.Parent = flyControls
+
+local downCorner = Instance.new("UICorner")
+downCorner.CornerRadius = UDim.new(0, 12)
+downCorner.Parent = downBtn
+
+local downStroke = Instance.new("UIStroke")
+downStroke.Color = Color3.fromRGB(255, 90, 110)
+downStroke.Thickness = 1.5
+downStroke.Parent = downBtn
+
+local isPressingUp = false
+local isPressingDown = false
+
+upBtn.MouseButton1Down:Connect(function() isPressingUp = true end)
+upBtn.MouseButton1Up:Connect(function() isPressingUp = false end)
+upBtn.MouseLeave:Connect(function() isPressingUp = false end)
+
+downBtn.MouseButton1Down:Connect(function() isPressingDown = true end)
+downBtn.MouseButton1Up:Connect(function() isPressingDown = false end)
+downBtn.MouseLeave:Connect(function() isPressingDown = false end)
+
+--==================================================
+-- THÔNG BÁO "NO FOUND"
+--==================================================
+
+local notification = Instance.new("Frame")
+notification.Name = "Notification"
+notification.Size = UDim2.new(0, 190, 0, 45)
+notification.Position = UDim2.new(0.5, -95, 0, 70)
+notification.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+notification.BackgroundTransparency = 0.05
+notification.BorderSizePixel = 0
+notification.Visible = false
+notification.Parent = gui
+
+local notificationCorner = Instance.new("UICorner")
+notificationCorner.CornerRadius = UDim.new(0, 10)
+notificationCorner.Parent = notification
+
+local notificationStroke = Instance.new("UIStroke")
+notificationStroke.Color = Color3.fromRGB(255, 90, 100)
+notificationStroke.Thickness = 1.2
+notificationStroke.Parent = notification
+
+local notificationIcon = Instance.new("TextLabel")
+notificationIcon.Size = UDim2.new(0, 35, 1, 0)
+notificationIcon.Position = UDim2.new(0, 5, 0, 0)
+notificationIcon.BackgroundTransparency = 1
+notificationIcon.Text = "!"
+notificationIcon.TextColor3 = Color3.fromRGB(255, 100, 110)
+notificationIcon.TextSize = 20
+notificationIcon.Font = Enum.Font.GothamBold
+notificationIcon.Parent = notification
+
+local notificationText = Instance.new("TextLabel")
+notificationText.Size = UDim2.new(1, -45, 1, 0)
+notificationText.Position = UDim2.new(0, 40, 0, 0)
+notificationText.BackgroundTransparency = 1
+notificationText.Text = "No Found"
+notificationText.TextColor3 = Color3.fromRGB(240, 240, 245)
+notificationText.TextSize = 14
+notificationText.Font = Enum.Font.GothamBold
+notificationText.TextXAlignment = Enum.TextXAlignment.Left
+notificationText.Parent = notification
+
+local notificationId = 0
+
+local function showNoFound(text)
+	notificationId += 1
+	local currentId = notificationId
+
+	notificationText.Text = text or "No Found"
+	notification.Visible = true
+	notification.BackgroundTransparency = 1
+	notification.Position = UDim2.new(0.5, -95, 0, 62)
+
+	TweenService:Create(
+		notification,
+		TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+		{
+			BackgroundTransparency = 0.05,
+			Position = UDim2.new(0.5, -95, 0, 70)
+		}
+	):Play()
+
+	task.wait(1.5)
+
+	if currentId ~= notificationId then
+		return
+	end
+
+	local tween = TweenService:Create(
+		notification,
+		TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+		{
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0.5, -95, 0, 62)
+		}
+	)
+
+	tween:Play()
+
+	tween.Completed:Connect(function()
+		if currentId == notificationId then
+			notification.Visible = false
+		end
+	end)
+end
+
+--==================================================
+-- COMMANDS PANEL
+--==================================================
+
+local panel = Instance.new("Frame")
+panel.Name = "CmdsPanel"
+panel.Size = UDim2.new(0, 520, 0, 360)
+panel.Position = UDim2.new(0.5, -260, 0.5, -180)
+panel.BackgroundColor3 = Color3.fromRGB(18, 18, 23)
+panel.BorderSizePixel = 0
+panel.Visible = false
+panel.Parent = gui
+
+local panelCorner = Instance.new("UICorner")
+panelCorner.CornerRadius = UDim.new(0, 14)
+panelCorner.Parent = panel
+
+local panelStroke = Instance.new("UIStroke")
+panelStroke.Color = Color3.fromRGB(85, 90, 110)
+panelStroke.Thickness = 1.5
+panelStroke.Parent = panel
+
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+header.BorderSizePixel = 0
+header.Parent = panel
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 14)
+headerCorner.Parent = header
+
+local headerFix = Instance.new("Frame")
+headerFix.Size = UDim2.new(1, 0, 0, 15)
+headerFix.Position = UDim2.new(0, 0, 1, -15)
+headerFix.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+headerFix.BorderSizePixel = 0
+headerFix.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -70, 1, 0)
+title.Position = UDim2.new(0, 18, 0, -6)
+title.BackgroundTransparency = 1
+title.Text = "⚡ COMMANDS"
+title.TextColor3 = Color3.fromRGB(235, 240, 255)
+title.TextSize = 19
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -70, 0, 18)
+subtitle.Position = UDim2.new(0, 20, 0, 30)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "Available Commands"
+subtitle.TextColor3 = Color3.fromRGB(135, 140, 155)
+subtitle.TextSize = 11
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.Parent = header
+
+local close = Instance.new("TextButton")
+close.Name = "CloseButton"
+close.Size = UDim2.new(0, 36, 0, 36)
+close.Position = UDim2.new(1, -44, 0, 9)
+close.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+close.Text = "X"
+close.TextColor3 = Color3.fromRGB(255, 120, 125)
+close.TextSize = 17
+close.Font = Enum.Font.GothamBold
+close.AutoButtonColor = false
+close.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 9)
+closeCorner.Parent = close
+
+local list = Instance.new("ScrollingFrame")
+list.Name = "CommandList"
+list.Size = UDim2.new(1, -30, 1, -75)
+list.Position = UDim2.new(0, 15, 0, 65)
+list.BackgroundTransparency = 1
+list.BorderSizePixel = 0
+list.ScrollBarThickness = 4
+list.ScrollBarImageTransparency = 0.25
+list.CanvasSize = UDim2.new(0, 0, 0, 0)
+list.Parent = panel
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 7)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = list
+
+local commands = {
+	{":cmds", "Open commands panel"},
+	{":speed [1-1000]", "Change player speed"},
+	{":jump [1-1000]", "Change jump power"},
+	{":fly [1-500]", "Toggle flying mode"},
+	{":unfly", "Turn flying mode off"},
+	{":noclip / :clip", "Walk through walls / Normal"},
+	{":god / :ungod", "Godmode (Inf Health) / Normal"},
+	{":sit", "Make your character sit"},
+	{":fling / :unfling", "Enable / Disable spin fling"},
+	{":antilag", "Optimize graphics for low lag"},
+	{":antiafk", "Prevent getting kicked for idle"},
+	{":reset", "Reset your character"},
+	{":rejoin", "Rejoin the server"},
+}
+
+for i, command in ipairs(commands) do
+	local item = Instance.new("Frame")
+	item.Size = UDim2.new(1, -5, 0, 42)
+	item.BackgroundColor3 = Color3.fromRGB(27, 27, 34)
+	item.BorderSizePixel = 0
+	item.LayoutOrder = i
+	item.Parent = list
+
+	local itemCorner = Instance.new("UICorner")
+	itemCorner.CornerRadius = UDim.new(0, 9)
+	itemCorner.Parent = item
+
+	local cmd = Instance.new("TextLabel")
+	cmd.Size = UDim2.new(0, 140, 1, 0)
+	cmd.Position = UDim2.new(0, 12, 0, 0)
+	cmd.BackgroundTransparency = 1
+	cmd.Text = command[1]
+	cmd.TextColor3 = Color3.fromRGB(105, 195, 255)
+	cmd.TextSize = 13
+	cmd.Font = Enum.Font.GothamBold
+	cmd.TextXAlignment = Enum.TextXAlignment.Left
+	cmd.Parent = item
+
+	local desc = Instance.new("TextLabel")
+	desc.Size = UDim2.new(1, -160, 1, 0)
+	desc.Position = UDim2.new(0, 155, 0, 0)
+	desc.BackgroundTransparency = 1
+	desc.Text = command[2]
+	desc.TextColor3 = Color3.fromRGB(165, 165, 175)
+	desc.TextSize = 12
+	desc.Font = Enum.Font.Gotham
+	desc.TextXAlignment = Enum.TextXAlignment.Left
+	desc.Parent = item
+end
+
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+end)
+
+local function openPanel()
+	panel.Visible = true
+	panel.Size = UDim2.new(0, 480, 0, 320)
+	panel.Position = UDim2.new(0.5, -240, 0.5, -160)
+
+	TweenService:Create(
+		panel,
+		TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+		{
+			Size = UDim2.new(0, 520, 0, 360),
+			Position = UDim2.new(0.5, -260, 0.5, -180)
+		}
+	):Play()
+end
+
+local function closePanel()
+	local tween = TweenService:Create(
+		panel,
+		TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+		{
+			Size = UDim2.new(0, 480, 0, 320)
+		}
+	)
+	tween:Play()
+	tween.Completed:Connect(function()
+		panel.Visible = false
+	end)
+end
+
+close.MouseButton1Click:Connect(closePanel)
+
+--==================================================
+-- THU / MỞ CMD BAR
+--==================================================
+
+local collapsed = false
+
+toggle.MouseButton1Click:Connect(function()
+	collapsed = not collapsed
+	if collapsed then
+		box.Visible = false
+		TweenService:Create(bar, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 42, 0, 42)}):Play()
+		TweenService:Create(toggle, TweenInfo.new(0.2), {Rotation = 180}):Play()
+	else
+		box.Visible = true
+		TweenService:Create(bar, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 420, 0, 42)}):Play()
+		TweenService:Create(toggle, TweenInfo.new(0.2), {Rotation = 0}):Play()
+	end
+end)
+
+--==================================================
+-- HỆ THỐNG XỬ LÝ LỆNH NÂNG CAO
+--==================================================
+
+-- 1. FLY
+local flying = false
+local flySpeed = 50
+local flyConnection = nil
+local bv, bg = nil, nil
+
+local function stopFly()
+	flying = false
+	flyControls.Visible = false
+	isPressingUp = false
+	isPressingDown = false
+
+	if flyConnection then
+		flyConnection:Disconnect()
+		flyConnection = nil
+	end
+
+	local character = player.Character
+	if character then
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.PlatformStand = false
+		end
+		if bv then bv:Destroy() bv = nil end
+		if bg then bg:Destroy() bg = nil end
+	end
+end
+
+local function startFly(speed)
+	stopFly()
+	flying = true
+	flySpeed = speed or 50
+	flyControls.Visible = true
+
+	local character = player.Character or player.CharacterAdded:Wait()
+	local rootPart = character:WaitForChild("HumanoidRootPart")
+	local humanoid = character:WaitForChild("Humanoid")
+
+	humanoid.PlatformStand = true
+
+	bv = Instance.new("BodyVelocity")
+	bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+	bv.Velocity = Vector3.zero
+	bv.Parent = rootPart
+
+	bg = Instance.new("BodyGyro")
+	bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+	bg.P = 10000
+	bg.CFrame = rootPart.CFrame
+	bg.Parent = rootPart
+
+	flyConnection = RunService.RenderStepped:Connect(function()
+		if not flying or not rootPart or not humanoid or humanoid.Health <= 0 then
+			stopFly()
+			return
+		end
+
+		bg.CFrame = camera.CFrame
+
+		local moveDir = humanoid.MoveDirection
+		local verticalDir = 0
+		local verticalSpeed = flySpeed * 1.5
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) or isPressingUp then
+			verticalDir = verticalDir + 1
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or isPressingDown then
+			verticalDir = verticalDir - 1
+		end
+
+		local horizontalVel = moveDir * flySpeed
+		local verticalVel = Vector3.new(0, verticalDir * verticalSpeed, 0)
+
+		bv.Velocity = horizontalVel + verticalVel
+	end)
+end
+
+-- 2. NOCLIP
+local noclip = false
+local noclipConn = nil
+
+local function setNoclip(state)
+	noclip = state
+	if noclipConn then
+		noclipConn:Disconnect()
+		noclipConn = nil
+	end
+
+	if noclip then
+		noclipConn = RunService.Stepped:Connect(function()
+			local character = player.Character
+			if character then
+				for _, part in ipairs(character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CanCollide = false
+					end
+				end
+			end
+		end)
+	end
+end
+
+-- 3. GOD MODE
+local godConn = nil
+local function setGodMode(state)
+	if godConn then
+		godConn:Disconnect()
+		godConn = nil
+	end
+
+	if state then
+		godConn = RunService.Stepped:Connect(function()
+			local character = player.Character
+			if character then
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					humanoid.Health = humanoid.MaxHealth
+				end
+			end
+		end)
+	end
+end
+
+-- 4. FLING
+local flinging = false
+local flingConn = nil
+
+local function setFling(state)
+	flinging = state
+	if flingConn then
+		flingConn:Disconnect()
+		flingConn = nil
+	end
+
+	if flinging then
+		flingConn = RunService.Heartbeat:Connect(function()
+			local character = player.Character
+			local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+			if rootPart then
+				rootPart.Velocity = Vector3.new(0, 10000, 0)
+				rootPart.RotVelocity = Vector3.new(10000, 10000, 10000)
+			end
+		end)
+	end
+end
+
+-- 5. ANTI-LAG
+local function enableAntiLag()
+	Lighting.GlobalShadows = false
+	Lighting.FogEnd = 9e9
+
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.Material = Enum.Material.SmoothPlastic
+			v.Reflectance = 0
+		elseif v:IsA("Decal") or v:IsA("Texture") then
+			v:Destroy()
+		elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+			v.Enabled = false
+		end
+	end
+end
+
+-- 6. ANTI-AFK
+local antiAfkEnabled = false
+local function enableAntiAfk()
+	if antiAfkEnabled then return end
+	antiAfkEnabled = true
+
+	local virtualUser = game:GetService("VirtualUser")
+	player.Idled:Connect(function()
+		virtualUser:CaptureController()
+		virtualUser:ClickButton2(Vector2.new())
+	end)
+end
+
+-- RESET STATE ON SPAWN
+player.CharacterAdded:Connect(function()
+	stopFly()
+	setNoclip(false)
+	setGodMode(false)
+	setFling(false)
+end)
+
+--==================================================
+-- KIỂM TRA COMMAND
+--==================================================
+
+local validCommands = {
+	[":cmds"] = true,
+	[":speed"] = true,
+	[":jump"] = true,
+	[":fly"] = true,
+	[":unfly"] = true,
+	[":noclip"] = true,
+	[":clip"] = true,
+	[":god"] = true,
+	[":ungod"] = true,
+	[":sit"] = true,
+	[":fling"] = true,
+	[":unfling"] = true,
+	[":antilag"] = true,
+	[":antiafk"] = true,
+	[":reset"] = true,
+	[":rejoin"] = true,
+}
+
+box.FocusLost:Connect(function(enterPressed)
+	if not enterPressed then return end
+
+	local rawText = string.lower(string.gsub(box.Text, "^%s*(.-)%s*$", "%1"))
+	if rawText == "" then return end
+
+	local args = string.split(rawText, " ")
+	local command = args[1]
+	local value = tonumber(args[2])
+
+	if not string.find(command, "^:") then
+		command = ":" .. command
+	end
+
+	local character = player.Character or player.CharacterAdded:Wait()
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+	if command == ":cmds" then
+		openPanel()
+
+	elseif command == ":speed" then
+		if humanoid then
+			humanoid.WalkSpeed = value and math.clamp(value, 1, 1000) or 16
+		end
+
+	elseif command == ":jump" then
+		if humanoid then
+			humanoid.UseJumpPower = true
+			humanoid.JumpPower = value and math.clamp(value, 1, 1000) or 50
+		end
+
+	elseif command == ":fly" then
+		local speed = value and math.clamp(value, 1, 500) or 50
+		startFly(speed)
+
+	elseif command == ":unfly" then
+		stopFly()
+
+	elseif command == ":noclip" then
+		setNoclip(true)
+
+	elseif command == ":clip" then
+		setNoclip(false)
+
+	elseif command == ":god" then
+		setGodMode(true)
+
+	elseif command == ":ungod" then
+		setGodMode(false)
+
+	elseif command == ":sit" then
+		if humanoid then
+			humanoid.Sit = true
+		end
+
+	elseif command == ":fling" then
+		setFling(true)
+
+	elseif command == ":unfling" then
+		setFling(false)
+
+	elseif command == ":antilag" then
+		enableAntiLag()
+
+	elseif command == ":antiafk" then
+		enableAntiAfk()
+
+	elseif command == ":reset" then
+		stopFly()
+		setNoclip(false)
+		setGodMode(false)
+		setFling(false)
+		if humanoid then
+			humanoid.Health = 0
+		end
+
+	elseif command == ":rejoin" then
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+
+	elseif validCommands[command] then
+		print("Command entered:", command)
+
+	else
+		showNoFound("No Found")
+	end
+
+	box.Text = ""
+end)
+
+--==================================================
+-- PHÍM /
+--==================================================
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.Slash and not collapsed then
+		box:CaptureFocus()
+	end
+end)
+
+--==================================================
+-- KÉO PANEL & CMD BAR
+--==================================================
+
+local dragging, dragStart, startPosition
+header.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPosition = panel.Position
+	end
+end)
+header.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+local barDragging, barDragStart, barStartPosition
+bar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if input.Target == toggle then return end
+		barDragging = true
+		barDragStart = input.Position
+		barStartPosition = bar.Position
+	end
+end)
+bar.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		barDragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		if dragging then
+			local delta = input.Position - dragStart
+			panel.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+		end
+		if barDragging then
+			local delta = input.Position - barDragStart
+			bar.Position = UDim2.new(barStartPosition.X.Scale, barStartPosition.X.Offset + delta.X, barStartPosition.Y.Scale, barStartPosition.Y.Offset + delta.Y)
+		end
+	end
+end)
+
+-- ANIMATION MỞ BAN ĐẦU
+bar.Position = UDim2.new(0.5, -210, 0, -55)
+TweenService:Create(bar, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -210, 0, 18)}):Play()
 
